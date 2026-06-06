@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Pendukung Keputusan Promosi Jabatan</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8FAFC;
+            color: #0F172A;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F1F5F9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94A3B8;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+            header, section, main > div:first-child, .no-print, button, input, select {
+                display: none !important;
+            }
+            main {
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .printing-area {
+                display: block !important;
+                border: none !important;
+                box-shadow: none !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased bg-slate-50">
+
+    <!-- Header Section -->
+    <header class="h-20 border-b border-slate-200 bg-white sticky top-0 z-50 flex items-center justify-between px-4 sm:px-8 flex-shrink-0">
+        <div class="flex flex-col">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight text-blue-600">SPK Promosi Jabatan</h1>
+            <p class="text-[9px] sm:text-[10px] text-slate-500 font-semibold uppercase tracking-widest">
+                Metode AHP &amp; TOPSIS • Dataset Karyawan Kaggle
+            </p>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <div class="hidden sm:flex flex-col items-end">
+                <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Status Perhitungan</span>
+                <span id="cr-status-badge"></span>
+            </div>
+            <div class="hidden sm:block h-10 w-px bg-slate-200 mx-1"></div>
+            <button onclick="triggerHTMLDownload()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-2 shadow-sm transition-colors cursor-pointer">
+                <i data-lucide="download" class="h-3.5 w-3.5"></i>
+                Download Report
+            </button>
+        </div>
+    </header>
+
+    <!-- KPI Section -->
+    <section class="bg-white border-b border-slate-200 py-5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-slate-50/50 border border-slate-200 p-4 rounded-xl flex flex-col justify-between hover:border-blue-300 transition-colors">
+                <div>
+                    <p class="text-[9px] font-bold text-slate-450 uppercase tracking-widest mb-1">Total Alternatif</p>
+                    <p id="kpi-total-candidates" class="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono tracking-tight">-</p>
+                </div>
+                <span class="text-[10px] text-green-600 font-bold uppercase tracking-wider mt-2">Validated Dataset</span>
+            </div>
+            <div class="bg-slate-50/50 border border-slate-200 p-4 rounded-xl flex flex-col justify-between hover:border-emerald-300 transition-colors">
+                <div>
+                    <p class="text-[9px] font-bold text-slate-450 uppercase tracking-widest mb-1">Total Kriteria</p>
+                    <p class="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono tracking-tight text-emerald-600">04</p>
+                </div>
+                <span class="text-[10px] text-blue-600 font-bold uppercase tracking-wider mt-2">AHP Weighted</span>
+            </div>
+            <div class="bg-slate-50/50 border border-slate-200 p-4 rounded-xl flex flex-col justify-between hover:border-yellow-300 transition-colors">
+                <div>
+                    <p class="text-[9px] font-bold text-slate-450 uppercase tracking-widest mb-1">Best Preference</p>
+                    <p id="kpi-best-pref" class="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono tracking-tight">-</p>
+                </div>
+                <span class="text-[10px] text-amber-600 font-bold uppercase tracking-wider mt-2">TOPSIS Final</span>
+            </div>
+            <div class="bg-blue-600 border border-blue-600 p-4 rounded-xl flex flex-col justify-between shadow-sm">
+                <div class="text-white">
+                    <p class="text-[9px] font-bold opacity-75 uppercase tracking-widest mb-1">Top Candidate</p>
+                    <h3 id="kpi-top-candidate-name" class="text-base font-bold leading-snug truncate">-</h3>
+                </div>
+                <p id="kpi-top-candidate-id" class="text-[10px] text-blue-105 font-mono font-bold mt-2">-</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Container Layout -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col lg:flex-row gap-6">
+        
+        <!-- Sidebar Navigation -->
+        <div class="w-full lg:w-64 shrink-0 flex flex-col gap-4 no-print">
+            <div class="bg-white border border-slate-200 rounded-xl p-2 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-1 scrollbar-none">
+                <button id="tab-btn-permasalahan" onclick="setActiveTab('permasalahan')" class="flex items-center px-4 lg:px-5 py-2.5 text-xs sm:text-sm font-medium transition-all cursor-pointer rounded-lg text-nowrap">
+                    <span>01</span><span class="ml-3">Permasalahan</span>
+                </button>
+                <button id="tab-btn-dataset" onclick="setActiveTab('dataset')" class="flex items-center px-4 lg:px-5 py-2.5 text-xs sm:text-sm font-medium transition-all cursor-pointer rounded-lg text-nowrap">
+                    <span>02</span><span class="ml-3">Dataset Raw</span>
+                </button>
+                <button id="tab-btn-kriteria" onclick="setActiveTab('kriteria')" class="flex items-center px-4 lg:px-5 py-2.5 text-xs sm:text-sm font-medium transition-all cursor-pointer rounded-lg text-nowrap">
+                    <span>03</span><span class="ml-3">Kriteria &amp; Bobot</span>
+                </button>
+                <button id="tab-btn-perhitungan-ahp" onclick="setActiveTab('perhitungan-ahp')" class="flex items-center px-4 lg:px-5 py-2.5 text-xs sm:text-sm font-medium transition-all cursor-pointer rounded-lg text-nowrap">
+                    <span>04</span><span class="ml-3">Proses AHP</span>
+                </button>
+                <button id="tab-btn-perhitungan-topsis" onclick="setActiveTab('perhitungan-topsis')" class="flex items-center px-4 lg:px-5 py-2.5 text-xs sm:text-sm font-medium transition-all cursor-pointer rounded-lg text-nowrap">
+                    <span>05</span><span class="ml-3">Proses TOPSIS</span>
+                </button>
+                <button id="tab-btn-ranking" onclick="setActiveTab('ranking')" class="flex items-center px-4 lg:px-5 py-2.5 text-xs sm:text-sm font-medium transition-all cursor-pointer rounded-lg text-nowrap">
+                    <span>06</span><span class="ml-3">Ranking Akhir</span>
+                </button>
+                <button id="tab-btn-rekomendasi" onclick="setActiveTab('rekomendasi')" class="flex items-center px-4 lg:px-5 py-2.5 text-xs sm:text-sm font-medium transition-all cursor-pointer rounded-lg text-nowrap">
+                    <span>07</span><span class="ml-3">Rekomendasi</span>
+                </button>
+            </div>
+
+            <!-- Dynamic Academic Sidebar Seal -->
+            <div id="sidebar-candidate-seal" class="p-4 border border-blue-100 rounded-xl bg-blue-50/70 text-blue-800">
+                <p class="text-[9px] font-bold uppercase mb-1.5 opacity-75 flex items-center gap-1">
+                    <i data-lucide="shield-check" class="h-3.5 w-3.5"></i> Selected Best
+                </p>
+                <p id="sidebar-candidate-id" class="text-xs font-bold font-mono">EMP-ID: -</p>
+                <p id="sidebar-candidate-score" class="text-[10px] font-medium mt-1">Score: -</p>
+            </div>
+        </div>
+
+        <!-- Display Area Panels -->
+        <div class="flex-1 bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs min-w-0">
+            
+            <!-- Tab 1: Permasalahan -->
+            <div id="tab-content-permasalahan" class="space-y-5 animate-fade-in hidden">
+                <h3 class="text-base sm:text-lg font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
+                    <i data-lucide="info" class="text-blue-600 h-4.5 w-4.5"></i>
+                    Latar Belakang &amp; Permasalahan
+                </h3>
+                <div class="text-xs sm:text-sm text-slate-600 space-y-4 leading-relaxed">
+                    <p>
+                        Proses promosi merupakan instrumen strategis yang digunakan manajemen perusahaan untuk mengapresiasi kinerja terbaik serta mendayagunakan bakat berpotensi tinggi pada jenjang kepemimpinan baru. Namun, pendelegasian ini seringkali menghadapi tantangan <strong>subjektivitas parsial, bias kepemimpinan pribadi, dan kurangnya akuntabilitas penilaian kriteria majemuk</strong>.
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                        <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/50">
+                            <h5 class="font-bold text-slate-800 text-xs mb-1.5 uppercase tracking-wider">Tujuan Aplikasi SPK</h5>
+                            <p class="text-[11px] sm:text-xs text-slate-500 leading-normal">
+                                Merancang rekomendasi pemilihan kandidat promosi jabatan secara transparan dari data riil karyawan. Sistem menyeimbangkan indikator penilaian murni tanpa manipulasi simulatif.
+                            </p>
+                        </div>
+                        <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/50">
+                            <h5 class="font-bold text-slate-800 text-xs mb-1.5 uppercase tracking-wider">Keunggulan Hibrida AHP-TOPSIS</h5>
+                            <p class="text-[11px] sm:text-xs text-slate-500 leading-normal">
+                                Sinergi yang optimal: AHP merampingkan pembobotan kriteria secara terstruktur dan rasional, sementara TOPSIS menyederhanakan perhitungan jarak matematis alternatif secara komprehensif.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="space-y-1.5 pt-2">
+                        <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider">Alasan Penggunaan Metode:</h4>
+                        <ul class="list-disc pl-5 space-y-1 text-xs text-slate-500">
+                            <li><strong>AHP (Analytic Hierarchy Process)</strong>: Memecah persoalan terstruktur bertingkat, menimbang perbandingan berpasangan, dan mengukur presisi konsistensi penilaian (Consistency Ratio &lt; 10%).</li>
+                            <li><strong>TOPSIS</strong>: Algoritma yang andal dalam menyelesaikan penentuan nilai alternatif terbaik yang tidak hanya dekat dengan solusi ideal positif (A+), tetapi juga terpisah sejauh mungkin dari solusi ideal negatif (A-).</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Dataset -->
+            <div id="tab-content-dataset" class="space-y-4 animate-fade-in hidden">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-3 gap-3">
+                    <h3 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="database" class="text-blue-600 h-4.5 w-4.5"></i>
+                        Eksplorasi Dataset Riil
+                    </h3>
+                    
+                    <div class="flex flex-wrap items-center gap-2 no-print">
+                        <div class="relative">
+                            <i data-lucide="search" class="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400"></i>
+                            <input id="filter-search" oninput="handleSearchQuery(this.value)" type="text" placeholder="Cari karyawan..." class="bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs w-full sm:w-44 focus:bg-white text-slate-700 outline-none">
+                        </div>
+                        <select id="filter-dept" onchange="handleDeptFilter(this.value)" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-700 outline-none">
+                            <option value="All">Semua Divisi</option>
+                            <option value="IT">IT</option>
+                            <option value="Sales">Sales</option>
+                            <option value="HR">HR</option>
+                        </select>
+                        <select id="filter-status" onchange="handleStatusFilter(this.value)" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-700 font-medium outline-none">
+                            <option value="Active">Hanya Aktif (Seleksi)</option>
+                            <option value="All">Semua Karyawan</option>
+                            <option value="Inactive">Hanya Inaktif</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto border border-slate-200 rounded-xl max-h-[380px]">
+                    <table class="table-auto w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-100 uppercase text-[9px] text-slate-500 font-bold sticky top-0 border-b border-slate-200 z-10">
+                            <tr>
+                                <th class="px-4 py-3">ID</th>
+                                <th class="px-4 py-3">Nama Lengkap</th>
+                                <th class="px-4 py-3">Usia</th>
+                                <th class="px-3 py-3">Gender</th>
+                                <th class="px-4 py-3">Divisi</th>
+                                <th class="px-4 py-3 text-right">Gaji Lancar</th>
+                                <th class="px-4 py-3 text-center">Score Kinerja</th>
+                                <th class="px-4 py-3">Masa Kerja</th>
+                                <th class="px-4 py-3 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataset-table-body" class="divide-y divide-slate-100 font-medium"></tbody>
+                    </table>
+                </div>
+                <div class="flex justify-between items-center text-[10px] text-slate-400 font-medium">
+                    <span id="dataset-stats-indicator">Menampilkan - dari total - rekam data mentah.</span>
+                    <span>* Skor performa kosong otomatis diisi nilai tengah 3.0</span>
+                </div>
+            </div>
+
+            <!-- Tab 3: Kriteria & Bobot -->
+            <div id="tab-content-kriteria" class="space-y-5 animate-fade-in hidden">
+                <h3 class="text-base sm:text-lg font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
+                    <i data-lucide="sliders" class="text-blue-600 h-4.5 w-4.5"></i>
+                    Matriks Perbandingan Berpasangan AHP
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-4 no-print">
+                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-widest flex items-center gap-1.5 border-b pb-2">
+                            <i data-lucide="sliders" class="h-3.5 w-3.5 text-blue-500"></i>
+                            Timbangan Prioritas Kerelasian Kriteria
+                        </h4>
+                        <div class="space-y-4" id="sliders-container"></div>
+                    </div>
+                    <div class="border border-slate-200 rounded-xl p-5 bg-white flex flex-col justify-between">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-widest border-b pb-2 mb-3">Bobot Relatif Hasil Pembobotan (PV)</h4>
+                            <p class="text-xs text-slate-450 leading-relaxed mb-4">
+                                Sliders timbangan di sebelah kiri secara otomatis menghitung nilai bobot kriteria AHP di bawah ini secara dinamis dan real-time:
+                            </p>
+                        </div>
+                        <div class="space-y-4" id="pv-bars-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 4: Proses AHP -->
+            <div id="tab-content-perhitungan-ahp" class="space-y-5 animate-fade-in hidden">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3 gap-3">
+                    <h3 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="calculator" class="text-blue-600 h-4.5 w-4.5"></i>
+                        Rincian Matriks &amp; Normalisasi AHP
+                    </h3>
+                    <span id="ahp-badge"></span>
+                </div>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                    <div class="rounded-xl border border-slate-200 p-4 space-y-3">
+                        <h5 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Matriks Perbandingan Berpasangan (Diagonal 1)</h5>
+                        <div class="overflow-x-auto" id="ahp-matrix-table-container"></div>
+                    </div>
+                    <div class="rounded-xl border border-slate-200 p-4 space-y-3">
+                        <h5 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Hasil Matriks Normalisasi &amp; Priority Vector W</h5>
+                        <div class="overflow-x-auto" id="ahp-norm-table-container"></div>
+                    </div>
+                </div>
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 font-mono text-[10px] sm:text-xs">
+                    <h5 class="font-bold text-slate-800 font-sans text-xs mb-3 flex items-center gap-1.5 uppercase tracking-wide">
+                        <i data-lucide="help-circle" class="h-3.5 w-3.5 text-blue-500"></i> Alur Diagnostik Indeks Konsistensi AHP:
+                    </h5>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                        <div class="bg-white border border-slate-200 rounded-lg p-3">
+                            <p class="text-slate-400 font-sans text-[9px] uppercase tracking-wider mb-1">λmax</p>
+                            <p id="diag-lambda" class="text-sm font-bold text-slate-800">-</p>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-lg p-3">
+                            <p class="text-slate-400 font-sans text-[9px] uppercase tracking-wider mb-1">Index (CI)</p>
+                            <p id="diag-ci" class="text-sm font-bold text-slate-800">-</p>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-lg p-3">
+                            <p class="text-slate-400 font-sans text-[9px] uppercase tracking-wider mb-1">Random Index (RI)</p>
+                            <p class="text-sm font-bold text-slate-800">0.90</p>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-lg p-3">
+                            <p class="text-slate-400 font-sans text-[9px] uppercase tracking-wider mb-1">Ratio (CR)</p>
+                            <p id="diag-cr" class="text-sm font-bold">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 5: Proses TOPSIS -->
+            <div id="tab-content-perhitungan-topsis" class="space-y-6 animate-fade-in hidden">
+                <h3 class="text-base sm:text-lg font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
+                    <i data-lucide="calculator" class="text-blue-600 h-4.5 w-4.5"></i>
+                    Langkah Perhitungan TOPSIS (Sampel 15 Teratas)
+                </h3>
+                <div id="topsis-calculation-view" class="space-y-5">
+                    <div class="space-y-2">
+                        <h5 class="font-bold text-xs sm:text-sm text-slate-700">Langkah 1 &amp; 2: Matriks Keputusan (X) &amp; Normalisasi (R)</h5>
+                        <div class="overflow-x-auto border border-slate-200 rounded-lg max-h-[160px]" id="topsis-norm-container"></div>
+                    </div>
+                    <div class="space-y-2">
+                        <h5 class="font-bold text-xs sm:text-sm text-slate-700 font-sans" id="topsis-weighted-header">Langkah 3 &amp; 4: Matriks Ternormalisasi Terbobot (V)</h5>
+                        <div class="overflow-x-auto border border-slate-200 rounded-lg max-h-[160px]" id="topsis-weighted-container"></div>
+                    </div>
+                    <div class="space-y-2">
+                        <h5 class="font-bold text-xs sm:text-sm text-slate-700">Langkah 5: Penentuan Solusi Ideal Positif (A+) &amp; Negatif (A-)</h5>
+                        <div class="overflow-x-auto border border-slate-200 rounded-lg" id="topsis-ideals-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 6: Ranking Akhir -->
+            <div id="tab-content-ranking" class="space-y-5 animate-fade-in hidden">
+                <h3 class="text-base sm:text-lg font-bold text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
+                    <i data-lucide="medal" class="text-blue-600 h-4.5 w-4.5"></i>
+                    Rapor Alternatif Terpilih &amp; Ranking TOPSIS
+                </h3>
+                <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-stretch">
+                    <div class="xl:col-span-5 bg-white rounded-2xl border border-slate-200 flex flex-col hover:border-slate-350 transition-colors shadow-xs overflow-hidden">
+                        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/40">
+                            <h4 class="font-extrabold text-slate-700 text-[10px] uppercase tracking-wider">Visualisasi Ranking TOPSIS (Top 10)</h4>
+                            <div class="flex gap-1.5">
+                                <span class="text-[8px] uppercase font-bold px-1.5 py-0.5 rounded border border-slate-250 text-slate-500 font-sans">D+ High</span>
+                                <span class="text-[8px] uppercase font-bold px-1.5 py-0.5 rounded border border-slate-250 text-slate-500 font-sans">D- Low</span>
+                            </div>
+                        </div>
+                        <div class="p-4 flex-1 flex flex-col justify-between gap-6" id="visual-bars-ranking-container"></div>
+                    </div>
+                    
+                    <div class="xl:col-span-7 bg-white rounded-2xl border border-slate-200 flex flex-col shadow-xs overflow-hidden">
+                        <div class="p-4 border-b border-slate-100 bg-slate-50/40">
+                            <h4 class="font-extrabold text-slate-700 text-[10px] uppercase tracking-wider">Tabel Keputusan &amp; Preferensi</h4>
+                        </div>
+                        <div class="overflow-x-auto max-h-[360px]">
+                            <table class="table-auto w-full text-left text-xs text-slate-700">
+                                <thead class="bg-slate-100 font-bold text-slate-500 text-[9px] uppercase sticky top-0 border-b z-10">
+                                    <tr>
+                                        <th class="px-4 py-2.5 text-center">Rank</th>
+                                        <th class="px-4 py-2.5">Name</th>
+                                        <th class="px-3 py-2.5 text-right">D+ (Ideal Pos)</th>
+                                        <th class="px-3 py-2.5 text-right">D- (Ideal Neg)</th>
+                                        <th class="px-4 py-2.5 text-right font-bold text-indigo-700">Score Preferensi P_i</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ranking-table-body" class="divide-y divide-slate-100 font-medium"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 7: Rekomendasi -->
+            <div id="tab-content-rekomendasi" class="space-y-5 animate-fade-in printing-area">
+                <div class="border-b border-slate-100 pb-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 no-print">
+                    <h3 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="award" class="text-blue-600 h-4.5 w-4.5"></i>
+                        Rekomendasi Utama Promosi Struktural
+                    </h3>
+                    <button onclick="window.print()" class="bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-2 cursor-pointer transition-colors shadow-xs">
+                        <i data-lucide="printer" class="h-3.5 w-3.5"></i>
+                        Cetak Surat Keputusan
+                    </button>
+                </div>
+                <div id="rekomendasi-sheet-container"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Embedded Scripts -->
+    <script>
+        // High density compressed dataset representation
+        const COLUMNS = ["ID", "Name", "Age", "Gender", "Department", "Salary", "JoiningDate", "PerformanceScore", "Experience", "Status", "Location", "Session"];
+        const RAW_EMPLOYEES = [
+            [1, "Cory Escobar", 48, "Female", "HR", 5641, "2015-05-03", 2.0, 16, "Active", "New York", "Night"],
+            [2, "Timothy Sanchez", 25, "Other", "Sales", 4249, "2020-11-09", 2.0, 11, "Inactive", "Los Angeles", "Evening"],
+            [3, "Chad Nichols", 57, "Other", "Sales", 3058, "2019-02-12", null, 1, "Inactive", "New York", "Morning"],
+            [4, "Christine Williams", 58, "Female", "IT", 5895, "2017-09-08", 2.0, 13, "Inactive", "Los Angeles", "Evening"],
+            [5, "Amber Harris", 35, "Other", "IT", 4317, "2020-02-15", 5.0, 16, "Inactive", "New York", "Evening"],
+            [6, "Ashley Howe", 29, "Female", "HR", 2591, "2016-06-24", 1.0, 6, "Active", "Chicago", "Evening"],
+            [7, "David Olson", 39, "Female", "Sales", 6826, "2023-05-11", null, 4, "Active", "New York", "Night"],
+            [8, "Amanda Baker", 52, "Other", "HR", 6285, "2015-04-01", null, 8, "Inactive", "Chicago", "Evening"],
+            [9, "Jeremy Wright", 63, "Female", "Sales", 9862, "2024-02-07", null, 3, "Inactive", "New York", "Night"],
+            [10, "Brian Faulkner", 30, "Male", "IT", 8202, "2018-05-26", 1.0, 9, "Active", "Los Angeles", "Morning"],
+            [11, "Nicole Bell", 42, "Female", "Sales", 5336, "2015-01-28", 3.0, 7, "Active", "Los Angeles", "Evening"],
+            [12, "Rodney Richardson", 60, "Other", "HR", 6908, "2015-03-14", 4.0, 19, "Active", "Chicago", "Night"],
+            [13, "Joshua Robinson", 61, "Male", "IT", 5688, "2020-06-21", null, 4, "Inactive", "Chicago", "Night"],
+            [14, "Benjamin Callahan", 34, "Male", "IT", 5593, "2019-06-23", null, 2, "Inactive", "Los Angeles", "Night"],
+            [15, "Matthew Collins MD", 31, "Female", "Sales", 8568, "2020-06-01", null, 20, "Inactive", "Los Angeles", "Evening"],
+            [16, "Gary Cooley", 62, "Male", "HR", 5386, "2017-07-25", null, 2, "Inactive", "Chicago", "Morning"],
+            [17, "Jonathan Perez", 59, "Male", "HR", 6586, "2019-02-19", 3.0, 7, "Inactive", "Los Angeles", "Evening"],
+            [18, "Jacqueline Randall", 31, "Female", "HR", 3519, "2018-05-18", 4.0, 6, "Active", "New York", "Morning"],
+            [19, "Nancy Stephens", 38, "Male", "HR", 9061, "2017-07-16", 5.0, 16, "Inactive", "Chicago", "Night"],
+            [20, "Victoria Fox", 57, "Female", "HR", 7251, "2023-06-07", null, 10, "Active", "Los Angeles", "Evening"],
+            [21, "Heather Jones", 35, "Male", "Sales", 4565, "2018-02-07", null, 9, "Active", "Chicago", "Night"],
+            [22, "Stacie Porter", 61, "Female", "HR", 4071, "2020-05-04", 2.0, 9, "Inactive", "Chicago", "Night"],
+            [23, "Bryce Carter", 35, "Female", "Sales", 9598, "2015-12-16", 4.0, 4, "Inactive", "New York", "Night"],
+            [24, "Marissa Stewart", 31, "Female", "HR", 5386, "2021-01-30", null, 3, "Active", "Los Angeles", "Evening"],
+            [25, "Tracy Carlson", 21, "Male", "HR", 9275, "2022-04-09", 4.0, 12, "Active", "New York", "Morning"],
+            [26, "Tara Blackwell", 30, "Other", "HR", 6120, "2020-02-20", 5.0, 7, "Active", "New York", "Evening"],
+            [27, "Austin Long", 20, "Female", "IT", 4899, "2024-05-01", 5.0, 8, "Inactive", "Chicago", "Night"],
+            [28, "Jordan Warren", 55, "Female", "HR", 4608, "2018-07-07", null, 18, "Inactive", "Los Angeles", "Morning"],
+            [29, "Vickie Campbell", 65, "Female", "IT", 9190, "2019-10-28", null, 12, "Inactive", "Chicago", "Morning"],
+            [30, "Rachel Ramsey", 22, "Male", "Sales", 9661, "2016-08-18", 2.0, 17, "Inactive", "Chicago", "Night"],
+            [31, "Brandi Smith", 21, "Other", "IT", 4780, "2020-01-20", 1.0, 7, "Inactive", "New York", "Night"],
+            [32, "Jacqueline Becker", 63, "Other", "Sales", 4270, "2021-12-16", null, 20, "Inactive", "Los Angeles", "Morning"],
+            [33, "Trevor Duncan", 65, "Other", "Sales", 6547, "2024-06-10", null, 10, "Active", "Chicago", "Evening"],
+            [34, "Mr. Brian Nelson", 42, "Female", "IT", 5207, "2017-08-17", 1.0, 4, "Active", "Los Angeles", "Night"],
+            [35, "Lisa Fry", 51, "Female", "IT", 9259, "2017-09-26", 4.0, 17, "Inactive", "Los Angeles", "Night"],
+            [36, "Kevin Watts", 35, "Male", "IT", 9078, "2019-06-12", 1.0, 7, "Inactive", "Los Angeles", "Evening"],
+            [37, "Jacqueline Moore", 39, "Male", "Sales", 2364, "2018-02-25", 1.0, 15, "Active", "Los Angeles", "Evening"],
+            [38, "Lawrence Rose", 18, "Female", "HR", 2904, "2021-04-11", 1.0, 17, "Inactive", "Chicago", "Night"],
+            [39, "Jordan Scott", 33, "Other", "Sales", 8678, "2016-05-15", 5.0, 9, "Active", "Los Angeles", "Evening"],
+            [40, "Lisa Wagner", 36, "Male", "HR", 8870, "2024-08-12", 4.0, 17, "Active", "Los Angeles", "Evening"],
+            [41, "Ricky Keith", 20, "Female", "Sales", 6621, "2024-01-29", null, 20, "Inactive", "Los Angeles", "Evening"],
+            [42, "Charles Mccall", 58, "Other", "IT", 9512, "2024-11-10", null, 8, "Inactive", "Los Angeles", "Morning"],
+            [43, "April Ponce", 27, "Female", "Sales", 6655, "2021-10-22", null, 2, "Inactive", "Los Angeles", "Evening"],
+            [44, "Cindy Nichols", 64, "Female", "IT", 2427, "2014-12-19", null, 6, "Active", "New York", "Night"],
+            [45, "Daniel Aguirre", 20, "Other", "IT", 4184, "2017-10-03", null, 13, "Active", "New York", "Morning"],
+            [46, "Dr. Monica Hanna PhD", 27, "Other", "HR", 4356, "2020-10-31", null, 11, "Inactive", "New York", "Night"],
+            [47, "Alicia Scott", 47, "Female", "HR", 7966, "2019-09-03", null, 8, "Inactive", "New York", "Morning"],
+            [48, "Jake Johnson", 48, "Other", "IT", 5848, "2017-02-03", 3.0, 2, "Active", "Los Angeles", "Night"],
+            [49, "Jamie Wood", 46, "Male", "Sales", 2773, "2023-02-25", 4.0, 9, "Active", "New York", "Morning"],
+            [50, "Valerie Guerrero", 23, "Male", "HR", 6253, "2023-09-21", 4.0, 14, "Active", "Los Angeles", "Night"],
+            [51, "Jamie Gregory", 27, "Other", "Sales", 3253, "2015-12-07", null, 12, "Active", "Chicago", "Morning"],
+            [52, "Jesse Vincent", 62, "Male", "HR", 6149, "2023-09-17", null, 11, "Inactive", "Chicago", "Evening"],
+            [53, "Steve Salinas", 42, "Other", "Sales", 6567, "2022-03-26", 2.0, 19, "Inactive", "Los Angeles", "Morning"],
+            [54, "Taylor Griffin", 62, "Other", "Sales", 5721, "2019-01-07", 5.0, 7, "Active", "Chicago", "Night"],
+            [55, "Kim Smith", 63, "Other", "HR", 4533, "2023-10-11", 4.0, 16, "Active", "Los Angeles", "Night"],
+            [56, "Jonathon Adams", 40, "Female", "IT", 8745, "2020-07-29", null, 12, "Inactive", "Chicago", "Night"],
+            [57, "Jeremy Conway", 38, "Other", "IT", 4954, "2024-08-11", null, 12, "Active", "Los Angeles", "Night"],
+            [58, "Johnathan Obrien", 58, "Female", "Sales", 3635, "2021-04-09", null, 7, "Active", "New York", "Night"],
+            [59, "Erik Moss", 57, "Male", "Sales", 4651, "2018-02-07", null, 19, "Active", "Los Angeles", "Night"],
+            [60, "Melinda Tyler", 19, "Other", "Sales", 5937, "2021-04-12", 5.0, 9, "Inactive", "Los Angeles", "Evening"],
+            [61, "Andrew Shannon", 51, "Other", "Sales", 8544, "2020-02-08", null, 6, "Active", "New York", "Evening"],
+            [62, "Carmen Taylor", 33, "Male", "Sales", 2851, "2023-01-30", 2.0, 11, "Active", "Chicago", "Morning"],
+            [63, "Joseph Anderson", 57, "Female", "IT", 3933, "2023-06-02", null, 6, "Active", "Los Angeles", "Night"],
+            [64, "Katherine Clark", 39, "Female", "IT", 2585, "2023-02-17", 2.0, 1, "Active", "Los Angeles", "Evening"],
+            [65, "Mary Miller", 20, "Other", "Sales", 3718, "2019-10-19", null, 4, "Active", "Los Angeles", "Morning"],
+            [66, "Sarah Harrell", 44, "Male", "IT", 2436, "2021-01-01", null, 5, "Inactive", "Chicago", "Night"],
+            [67, "Kelli Lopez", 25, "Female", "HR", 7637, "2021-09-21", null, 4, "Active", "Los Angeles", "Night"],
+            [68, "Denise Smith", 27, "Male", "HR", 6921, "2024-10-31", 2.0, 3, "Active", "Chicago", "Evening"],
+            [69, "Alyssa Taylor", 29, "Male", "HR", 7554, "2017-10-19", null, 17, "Active", "Chicago", "Night"],
+            [70, "Erica James", 64, "Female", "IT", 2442, "2020-09-28", null, 14, "Inactive", "Los Angeles", "Morning"],
+            [71, "Daniel Hamilton", 40, "Male", "Sales", 2466, "2018-04-08", null, 15, "Active", "Chicago", "Evening"],
+            [72, "Tiffany Alexander", 45, "Female", "Sales", 3897, "2019-05-18", 4.0, 12, "Active", "Chicago", "Evening"],
+            [73, "Jennifer Carter", 52, "Male", "HR", 8386, "2016-04-06", null, 14, "Active", "Chicago", "Morning"],
+            [74, "Amanda Rodgers", 60, "Male", "IT", 3767, "2018-03-21", 3.0, 3, "Inactive", "Los Angeles", "Night"],
+            [75, "Francisco Jones", 18, "Female", "Sales", 8622, "2023-07-01", 1.0, 13, "Inactive", "Chicago", "Evening"],
+            [76, "Cameron Butler", 31, "Female", "IT", 8032, "2023-10-20", 4.0, 11, "Inactive", "New York", "Morning"],
+            [77, "Victor Nelson", 47, "Female", "Sales", 2025, "2015-05-14", 1.0, 5, "Active", "New York", "Night"],
+            [78, "Kathy Thompson", 19, "Other", "HR", 4698, "2016-02-23", 3.0, 15, "Inactive", "Chicago", "Night"],
+            [79, "Michele Schmidt", 56, "Male", "HR", 5457, "2016-05-22", null, 11, "Inactive", "Chicago", "Evening"],
+            [80, "Mary Singh", 39, "Other", "IT", 5562, "2019-07-06", null, 7, "Inactive", "New York", "Evening"],
+            [81, "Julia Stanley", 28, "Female", "HR", 2077, "2021-07-28", null, 11, "Inactive", "Los Angeles", "Morning"],
+            [82, "Kevin Price", 62, "Male", "HR", 4292, "2020-11-12", 2.0, 7, "Active", "Los Angeles", "Night"],
+            [83, "Jamie Wright", 49, "Other", "Sales", 3111, "2020-11-02", null, 3, "Active", "Chicago", "Evening"],
+            [84, "Elaine Payne", 18, "Female", "IT", 5470, "2017-06-23", 3.0, 8, "Active", "Los Angeles", "Evening"],
+            [85, "Justin Rodriguez", 39, "Other", "Sales", 3115, "2020-07-01", 4.0, 4, "Active", "Chicago", "Evening"],
+            [86, "Chase Taylor", 29, "Other", "IT", 9901, "2017-10-04", 2.0, 7, "Active", "Los Angeles", "Evening"],
+            [87, "Dustin Allen", 34, "Male", "IT", 8629, "2015-01-08", null, 9, "Inactive", "Chicago", "Morning"],
+            [88, "Lori Bowen", 28, "Female", "Sales", 6839, "2023-01-07", null, 4, "Active", "Los Angeles", "Evening"],
+            [89, "Jessica Sanders", 41, "Male", "HR", 6828, "2024-08-02", 1.0, 10, "Inactive", "Chicago", "Night"],
+            [90, "Lauren Lee", 60, "Female", "Sales", 8710, "2020-07-16", 2.0, 10, "Inactive", "Los Angeles", "Evening"],
+            [91, "Kyle Schwartz", 31, "Male", "HR", 3488, "2023-03-16", 1.0, 3, "Active", "New York", "Morning"],
+            [92, "Bruce Campbell", 58, "Other", "IT", 5271, "2023-12-20", null, 7, "Active", "Chicago", "Night"],
+            [93, "Peter Moore", 38, "Other", "Sales", 4897, "2021-03-13", 1.0, 4, "Inactive", "Chicago", "Morning"],
+            [94, "Elizabeth Gallagher", 21, "Female", "IT", 2860, "2023-02-06", 4.0, 4, "Active", "Los Angeles", "Night"],
+            [95, "Michael Garcia", 62, "Male", "Sales", 3482, "2018-01-29", 3.0, 20, "Active", "New York", "Night"],
+            [96, "Jeff Wilson", 45, "Other", "HR", 3427, "2024-06-08", null, 8, "Active", "Chicago", "Evening"],
+            [97, "Holly Gaines", 22, "Male", "Sales", 5432, "2017-01-14", null, 14, "Inactive", "Los Angeles", "Morning"],
+            [98, "Matthew Fields", 33, "Female", "HR", 2378, "2015-08-07", null, 20, "Inactive", "Los Angeles", "Night"],
+            [99, "Kathleen Thomas", 20, "Other", "IT", 6768, "2018-09-15", null, 2, "Inactive", "Los Angeles", "Night"],
+            [100, "Thomas Hamilton", 33, "Male", "Sales", 8076, "2017-12-24", null, 9, "Inactive", "Chicago", "Morning"],
+            [101, "Bryan Navarro", 26, "Female", "IT", 9538, "2021-01-23", null, 3, "Active", "New York", "Morning"],
+            [102, "Jennifer Hansen", 27, "Other", "HR", 2912, "2020-02-22", 2.0, 3, "Inactive", "New York", "Night"],
+            [103, "James Saunders", 34, "Other", "IT", 6742, "2019-09-16", null, 8, "Active", "Los Angeles", "Night"],
+            [104, "Jose Henson", 32, "Male", "HR", 6458, "2023-03-25", 5.0, 7, "Active", "Chicago", "Evening"],
+            [105, "Isaiah Sanders DDS", 31, "Female", "HR", 2752, "2021-04-28", 5.0, 6, "Active", "Chicago", "Night"],
+            [106, "Katelyn Chavez", 25, "Other", "HR", 7371, "2015-10-06", null, 13, "Inactive", "Chicago", "Evening"],
+            [107, "Nancy Robinson", 21, "Other", "Sales", 5133, "2017-12-19", null, 11, "Active", "Los Angeles", "Evening"],
+            [108, "Sandra Allen", 24, "Male", "IT", 2578, "2019-01-05", 5.0, 16, "Active", "Chicago", "Morning"],
+            [109, "Mrs. Robin Mccarthy PhD", 51, "Male", "HR", 7457, "2019-04-24", null, 15, "Active", "Los Angeles", "Night"],
+            [110, "Catherine Ray", 58, "Female", "Sales", 7263, "2017-12-10", null, 20, "Active", "New York", "Morning"],
+            [111, "James Johnson", 65, "Female", "HR", 2166, "2016-08-20", 2.0, 17, "Inactive", "New York", "Morning"],
+            [112, "Sarah Barrera", 31, "Female", "Sales", 2303, "2021-10-30", 3.0, 18, "Inactive", "Los Angeles", "Night"],
+            [113, "Luke Mcpherson", 34, "Other", "IT", 9812, "2016-01-29", 3.0, 13, "Active", "New York", "Evening"],
+            [114, "Michael Moore", 65, "Other", "Sales", 4940, "2021-03-26", 2.0, 11, "Active", "Los Angeles", "Evening"],
+            [115, "Donna Manning", 40, "Other", "IT", 3935, "2021-05-10", 5.0, 19, "Inactive", "Chicago", "Morning"],
+            [116, "John Lloyd", 19, "Male", "HR", 3233, "2017-05-10", 5.0, 6, "Inactive", "Chicago", "Evening"],
+            [117, "Sean Owens", 45, "Male", "HR", 4012, "2016-07-09", null, 10, "Inactive", "Los Angeles", "Night"],
+            [118, "Gregory Robinson", 32, "Other", "IT", 8619, "2021-01-16", null, 8, "Inactive", "New York", "Morning"],
+            [119, "Tara Hudson", 48, "Female", "IT", 2898, "2022-01-02", null, 12, "Inactive", "Los Angeles", "Morning"],
+            [120, "Heidi Franklin", 22, "Male", "HR", 7187, "2024-01-26", null, 1, "Active", "New York", "Morning"]
+        ];
+
+        // Global State Variables
+        let activeTab = "permasalahan";
+        let searchQuery = "";
+        let deptFilter = "All";
+        let statusFilter = "Active";
+
+        let sliders = {
+            comp_0_1: 3, // Performance vs Experience
+            comp_0_2: 5, // Performance vs Salary
+            comp_0_3: 7, // Performance vs Age
+            comp_1_2: 3, // Experience vs Salary
+            comp_1_3: 5, // Experience vs Age
+            comp_2_3: 2  // Salary vs Age
+        };
+
+        const RI_TABLE = { 1: 0.0, 2: 0.0, 3: 0.58, 4: 0.90, 5: 1.12, 6: 1.24, 7: 1.32, 8: 1.41, 9: 1.45, 10: 1.49 };
+
+        // Parse list of employees from RAW_EMPLOYEES array
+        const fullEmployeeList = RAW_EMPLOYEES.map(row => {
+            const obj = {};
+            COLUMNS.forEach((col, idx) => {
+                obj[col] = row[idx];
+            });
+            if (obj.PerformanceScore === null || obj.PerformanceScore === undefined || isNaN(Number(obj.PerformanceScore))) {
+                obj.PerformanceScore = 3.0; // midpoint replacement
+            }
+            return obj;
+        });
+
+        // AHP Decoder
+        function decodeSliderValue(val) {
+            if (val >= 1) return val;
+            if (val === 0) return 1.0;
+            return 1 / Math.abs(val);
+        }
+
+        // AHP Slider Formatting Scales
+        function getScaleLabel(val) {
+            if (val === 1 || val === 0) return "Sama Penting (1:1)";
+            if (val > 1) return `Kriteria Kiri Lebih Penting (${val}x)`;
+            return `Kriteria Kanan Lebih Penting (${Math.abs(val)}x)`;
+        }
+
+        // Execution logic
+        function calculateAHP() {
+            const n = 4;
+            const matrix = Array(n).fill(null).map(() => Array(n).fill(1));
+
+            // Set matrix based on sliders
+            matrix[0][1] = decodeSliderValue(sliders.comp_0_1);
+            matrix[1][0] = 1 / matrix[0][1];
+
+            matrix[0][2] = decodeSliderValue(sliders.comp_0_2);
+            matrix[2][0] = 1 / matrix[0][2];
+
+            matrix[0][3] = decodeSliderValue(sliders.comp_0_3);
+            matrix[3][0] = 1 / matrix[0][3];
+
+            matrix[1][2] = decodeSliderValue(sliders.comp_1_2);
+            matrix[2][1] = 1 / matrix[1][2];
+
+            matrix[1][3] = decodeSliderValue(sliders.comp_1_3);
+            matrix[3][1] = 1 / matrix[1][3];
+
+            matrix[2][3] = decodeSliderValue(sliders.comp_2_3);
+            matrix[3][2] = 1 / matrix[2][3];
+
+            // Col sums
+            const colSums = Array(n).fill(0);
+            for (let j = 0; j < n; j++) {
+                for (let i = 0; i < n; i++)colSums[j] += matrix[i][j];
+            }
+
+            // Normalization matrix
+            const normalMatrix = Array(n).fill(null).map(() => Array(n).fill(0));
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) normalMatrix[i][j] = matrix[i][j] / colSums[j];
+            }
+
+            // Calculation row average (representing Priority Vector weights)
+            const weights = Array(n).fill(0);
+            for (let i = 0; i < n; i++) {
+                let rowSum = 0;
+                for (let j = 0; j < n; j++) rowSum += normalMatrix[i][j];
+                weights[i] = rowSum / n;
+            }
+
+            // Checking consistency index Ratio
+            const weightedSum = Array(n).fill(0);
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n; j++) weightedSum[i] += matrix[i][j] * weights[j];
+            }
+
+            const ratios = Array(n).fill(0);
+            for (let i = 0; i < n; i++) ratios[i] = weightedSum[i] / weights[i];
+
+            const lambdaMax = ratios.reduce((sum, v) => sum + v, 0) / n;
+            const ci = (lambdaMax - n) / (n - 1);
+            const ri = RI_TABLE[n] || 0.90;
+            const cr = ri === 0 ? 0 : ci / ri;
+            const isConsistent = cr < 0.1;
+
+            return { matrix, normalMatrix, weights, lambdaMax, ci, cr, isConsistent };
+        }
+
+        function calculateTOPSIS(employees, weights) {
+            if (employees.length === 0) {
+                return { items: [], idealPositive: [0,0,0,0], idealNegative: [0,0,0,0] };
+            }
+
+            let sumSq1 = 0, sumSq2 = 0, sumSq3 = 0, sumSq4 = 0;
+            employees.forEach(emp => {
+                sumSq1 += emp.PerformanceScore * emp.PerformanceScore;
+                sumSq2 += emp.Experience * emp.Experience;
+                sumSq3 += emp.Salary * emp.Salary;
+                sumSq4 += emp.Age * emp.Age;
+            });
+
+            const div1 = Math.sqrt(sumSq1) || 1;
+            const div2 = Math.sqrt(sumSq2) || 1;
+            const div3 = Math.sqrt(sumSq3) || 1;
+            const div4 = Math.sqrt(sumSq4) || 1;
+
+            const items = employees.map(emp => {
+                const r1 = emp.PerformanceScore / div1;
+                const r2 = emp.Experience / div2;
+                const r3 = emp.Salary / div3;
+                const r4 = emp.Age / div4;
+
+                return {
+                    employee: emp,
+                    c1_value: emp.PerformanceScore,
+                    c2_value: emp.Experience,
+                    c3_value: emp.Salary,
+                    c4_value: emp.Age,
+                    r_c1: r1, r_c2: r2, r_c3: r3, r_c4: r4,
+                    v_c1: r1 * weights[0],
+                    v_c2: r2 * weights[1],
+                    v_c3: r3 * weights[2],
+                    v_c4: r4 * weights[3]
+                };
+            });
+
+            // Find ideals
+            const max1 = Math.max(...items.map(it => it.v_c1));
+            const min1 = Math.min(...items.map(it => it.v_c1));
+            const max2 = Math.max(...items.map(it => it.v_c2));
+            const min2 = Math.min(...items.map(it => it.v_c2));
+            const max3 = Math.max(...items.map(it => it.v_c3));
+            const min3 = Math.min(...items.map(it => it.v_c3));
+            const max4 = Math.max(...items.map(it => it.v_c4));
+            const min4 = Math.min(...items.map(it => it.v_c4));
+
+            // C1, C2 Benefit (Maximize). C3, C4 Cost (Minimize).
+            const idealPositive = [max1, max2, min3, min4];
+            const idealNegative = [min1, min2, max3, max4];
+
+            items.forEach(it => {
+                const dPlus = Math.sqrt(
+                    Math.pow(it.v_c1 - idealPositive[0], 2) +
+                    Math.pow(it.v_c2 - idealPositive[1], 2) +
+                    Math.pow(it.v_c3 - idealPositive[2], 2) +
+                    Math.pow(it.v_c4 - idealPositive[3], 2)
+                );
+                const dMinus = Math.sqrt(
+                    Math.pow(it.v_c1 - idealNegative[0], 2) +
+                    Math.pow(it.v_c2 - idealNegative[1], 2) +
+                    Math.pow(it.v_c3 - idealNegative[2], 2) +
+                    Math.pow(it.v_c4 - idealNegative[3], 2)
+                );
+
+                it.dPlus = dPlus;
+                it.dMinus = dMinus;
+                it.preferenceWeight = (dPlus + dMinus) === 0 ? 0 : dMinus / (dPlus + dMinus);
+            });
+
+            const sorted = [...items].sort((a,b) => b.preferenceWeight - a.preferenceWeight);
+            sorted.forEach((it, idx) => {
+                it.rank = idx + 1;
+            });
+
+            return { items: sorted, idealPositive, idealNegative };
+        }
+
+        // Active State Setters
+        function setActiveTab(tab) {
+            activeTab = tab;
+            updateApp();
+        }
+
+        function handleSearchQuery(val) {
+            searchQuery = val;
+            updateApp();
+        }
+
+        function handleDeptFilter(val) {
+            deptFilter = val;
+            updateApp();
+        }
+
+        function handleStatusFilter(val) {
+            statusFilter = val;
+            updateApp();
+        }
+
+        function handleSliderValueChange(key, val) {
+            sliders[key] = Number(val);
+            updateApp();
+        }
+
+        // Master UI Refresher Function
+        function updateApp() {
+            // 1. Calculate AHP
+            const ahpResult = calculateAHP();
+            
+            // 2. Filter employees list
+            const filteredEmployees = fullEmployeeList.filter(emp => {
+                const matchDept = deptFilter === "All" || emp.Department === deptFilter;
+                const matchStatus = statusFilter === "All" || emp.Status === statusFilter;
+                const matchSearch = emp.Name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                    emp.ID.toString() === searchQuery.trim();
+                return matchDept && matchStatus && matchSearch;
+            });
+
+            // 3. Calculate TOPSIS
+            const topsisResult = calculateTOPSIS(filteredEmployees, ahpResult.weights);
+            const bestCandidate = topsisResult.items[0];
+
+            // 4. Update Header Consistent badge
+            const badgeContainer = document.getElementById("cr-status-badge");
+            if (ahpResult.isConsistent) {
+                badgeContainer.innerHTML = `<span class="text-xs text-emerald-600 font-bold flex items-center gap-1">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Konsisten (CR = ${ahpResult.cr.toFixed(4)})
+                </span>`;
+            } else {
+                badgeContainer.innerHTML = `<span class="text-xs text-rose-600 font-bold flex items-center gap-1">
+                    <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                    Tidak Konsisten (CR = ${ahpResult.cr.toFixed(4)})
+                </span>`;
+            }
+
+            // 5. Update KPI segment
+            document.getElementById("kpi-total-candidates").innerText = filteredEmployees.length;
+            document.getElementById("kpi-best-pref").innerText = bestCandidate ? bestCandidate.preferenceWeight.toFixed(4) : "0.0000";
+            document.getElementById("kpi-top-candidate-name").innerText = bestCandidate ? bestCandidate.employee.Name : "-";
+            document.getElementById("kpi-top-candidate-id").innerText = bestCandidate ? `ID #${bestCandidate.employee.ID} • ${bestCandidate.employee.Department}` : "-";
+
+            // 6. Update Sidebar candidate details
+            document.getElementById("sidebar-candidate-id").innerText = bestCandidate ? `EMP-ID: #${bestCandidate.employee.ID}` : "EMP-ID: -";
+            document.getElementById("sidebar-candidate-score").innerText = bestCandidate ? `Score: ${bestCandidate.preferenceWeight.toFixed(4)}` : "Score: -";
+
+            // 7. Toggle Navigation Tab Styles
+            const tabs = ['permasalahan', 'dataset', 'kriteria', 'perhitungan-ahp', 'perhitungan-topsis', 'ranking', 'rekomendasi'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-btn-${t}`);
+                const panel = document.getElementById(`tab-content-${t}`);
+                
+                if (t === activeTab) {
+                    btn.className = "flex items-center px-4 lg:px-5 py-2.5 text-xs sm:text-sm font-bold transition-all cursor-pointer rounded-lg text-nowrap bg-blue-50 text-blue-600 lg:border-r-3 lg:border-blue-600 lg:rounded-r-none font-bold";
+                    panel.classList.remove('hidden');
+                } else {
+                    btn.className = "flex items-center px-4 lg:px-5 py-2.5 text-xs sm:text-sm font-medium transition-all cursor-pointer rounded-lg text-nowrap text-slate-400 hover:text-blue-600 hover:bg-slate-50";
+                    panel.classList.add('hidden');
+                }
+            });
+
+            // 8. Render Tab 2 (Dataset Table)
+            const dTableBody = document.getElementById("dataset-table-body");
+            if (filteredEmployees.length === 0) {
+                dTableBody.innerHTML = `<tr><td colspan="9" class="px-4 py-12 text-center text-slate-400 font-normal">Tidak ditemukan kecocokan karyawan pada filter kriteria.</td></tr>`;
+            } else {
+                dTableBody.innerHTML = filteredEmployees.map(emp => `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-4 py-2.5 font-mono text-slate-400">#${emp.ID}</td>
+                        <td class="px-4 py-2.5 font-bold text-slate-800">${emp.Name}</td>
+                        <td class="px-4 py-2.5 text-slate-600">${emp.Age} Thn</td>
+                        <td class="px-3 py-2.5 text-slate-500">${emp.Gender}</td>
+                        <td class="px-4 py-2.5">
+                            <span class="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-650 text-[10px] font-semibold">${emp.Department}</span>
+                        </td>
+                        <td class="px-4 py-2.5 text-right font-mono text-slate-600">Rp${emp.Salary.toLocaleString("id-ID")}</td>
+                        <td class="px-4 py-2.5 text-center text-blue-600 font-bold">${emp.PerformanceScore.toFixed(1)}</td>
+                        <td class="px-4 py-2.5 text-slate-600">${emp.Experience} Thn</td>
+                        <td class="px-4 py-2.5 text-center">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] ${emp.Status === 'Active' ? 'bg-green-50 border border-green-100 text-green-600' : 'bg-slate-100 border border-slate-200 text-slate-400'}">${emp.Status === "Active" ? "Aktif" : "Inaktif"}</span>
+                        </td>
+                    </tr>
+                `).join("");
+            }
+            document.getElementById("dataset-stats-indicator").innerText = `Menampilkan ${filteredEmployees.length} dari total ${fullEmployeeList.length} rekam data mentah.`;
+
+            // 9. Render Tab 3 (Sliders Control Panel & Relative bars)
+            const slContainer = document.getElementById("sliders-container");
+            const comparisons = [
+                { key: "comp_0_1", label: "C1. Kinerja vs C2. Masa Kerja" },
+                { key: "comp_0_2", label: "C1. Kinerja vs C3. Gaji Lancar" },
+                { key: "comp_0_3", label: "C1. Kinerja vs C4. Usia Karyawan" },
+                { key: "comp_1_2", label: "C2. Masa Kerja vs C3. Gaji Lancar" },
+                { key: "comp_1_3", label: "C2. Masa Kerja vs C4. Usia Karyawan" },
+                { key: "comp_2_3", label: "C3. Gaji Lancar vs C4. Usia Karyawan" }
+            ];
+            slContainer.innerHTML = comparisons.map(c => `
+                <div>
+                    <label class="text-xs font-semibold text-slate-600 flex justify-between mb-1">
+                        <span>${c.label}</span>
+                        <span class="text-blue-600 font-bold text-[10px]">${getScaleLabel(sliders[c.key])}</span>
+                    </label>
+                    <input type="range" min="-9" max="9" step="1" value="${sliders[c.key]}" oninput="handleSliderValueChange('${c.key}', this.value)" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+            `).join("");
+
+            const pvContainer = document.getElementById("pv-bars-container");
+            const w_c1 = ahpResult.weights[0] * 100;
+            const w_c2 = ahpResult.weights[1] * 100;
+            const w_c3 = ahpResult.weights[2] * 100;
+            const w_c4 = ahpResult.weights[3] * 100;
+            pvContainer.innerHTML = `
+                <div>
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-indigo-600">C1. Skor Kinerja (Benefit)</span>
+                        <span class="font-mono">${w_c1.toFixed(2)}%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2">
+                        <div class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width: ${w_c1}%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-emerald-600">C2. Masa Kerja (Benefit)</span>
+                        <span class="font-mono">${w_c2.toFixed(2)}%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2">
+                        <div class="bg-emerald-600 h-2 rounded-full transition-all duration-300" style="width: ${w_c2}%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-amber-600">C3. Gaji Lancar (Cost)</span>
+                        <span class="font-mono">${w_c3.toFixed(2)}%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2">
+                        <div class="bg-amber-600 h-2 rounded-full transition-all duration-300" style="width: ${w_c3}%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs font-semibold mb-1">
+                        <span class="text-rose-600">C4. Usia Karyawan (Cost)</span>
+                        <span class="font-mono">${w_c4.toFixed(2)}%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2">
+                        <div class="bg-rose-600 h-2 rounded-full transition-all duration-300" style="width: ${w_c4}%"></div>
+                    </div>
+                </div>
+            `;
+
+            // 10. Render Tab 4 (Proses AHP Matriks)
+            const ahpBadge = document.getElementById("ahp-badge");
+            if (ahpResult.isConsistent) {
+                ahpBadge.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-250"><i data-lucide="check-circle" class="h-3 w-3"></i> KONSISTEN (CR &lt; 0.1)</span>`;
+            } else {
+                ahpBadge.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-250"><i data-lucide="x-circle" class="h-3 w-3"></i> TIDAK KONSISTEN (CR &ge; 0.1)</span>`;
+            }
+
+            const ahpMatrixContainer = document.getElementById("ahp-matrix-table-container");
+            const critLabels = ["C1 (Kinerja)", "C2 (Masa Kerja)", "C3 (Gaji)", "C4 (Usia)"];
+            ahpMatrixContainer.innerHTML = `
+                <table class="table-auto w-full text-xs text-center border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b font-medium text-slate-500">
+                            <th class="px-2 py-2 text-left">Kriteria</th>
+                            <th class="px-2 py-2">C1</th><th class="px-2 py-2">C2</th><th class="px-2 py-2">C3</th><th class="px-2 py-2">C4</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-150 font-mono text-slate-650">
+                        ${critLabels.map((label, i) => `
+                            <tr>
+                                <td class="px-2 py-2 text-left font-sans font-semibold text-slate-700">${label}</td>
+                                <td class="px-2 py-2">${ahpResult.matrix[i][0].toFixed(4)}</td>
+                                <td class="px-2 py-2">${ahpResult.matrix[i][1].toFixed(4)}</td>
+                                <td class="px-2 py-2">${ahpResult.matrix[i][2].toFixed(4)}</td>
+                                <td class="px-2 py-2">${ahpResult.matrix[i][3].toFixed(4)}</td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            `;
+
+            const ahpNormContainer = document.getElementById("ahp-norm-table-container");
+            ahpNormContainer.innerHTML = `
+                <table class="table-auto w-full text-xs text-center border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b font-medium text-slate-500">
+                            <th class="px-2 py-2 text-left">Kriteria</th>
+                            <th class="px-1.5 py-2">C1</th><th class="px-1.5 py-2">C2</th><th class="px-1.5 py-2">C3</th><th class="px-1.5 py-2">C4</th>
+                            <th class="px-2 py-2 bg-blue-50/70 text-blue-700 font-bold">W</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-150 font-mono text-slate-650">
+                        ${critLabels.map((label, i) => `
+                            <tr>
+                                <td class="px-2 py-2 text-left font-sans font-semibold text-slate-700">${label}</td>
+                                <td class="px-1.5 py-2">${ahpResult.normalMatrix[i][0].toFixed(4)}</td>
+                                <td class="px-1.5 py-2">${ahpResult.normalMatrix[i][1].toFixed(4)}</td>
+                                <td class="px-1.5 py-2">${ahpResult.normalMatrix[i][2].toFixed(4)}</td>
+                                <td class="px-1.5 py-2">${ahpResult.normalMatrix[i][3].toFixed(4)}</td>
+                                <td class="px-2 py-2 bg-blue-50/40 text-blue-800 font-bold">${ahpResult.weights[i].toFixed(4)}</td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            `;
+
+            document.getElementById("diag-lambda").innerText = ahpResult.lambdaMax.toFixed(5);
+            document.getElementById("diag-ci").innerText = ahpResult.ci.toFixed(5);
+            const crField = document.getElementById("diag-cr");
+            crField.innerText = ahpResult.cr.toFixed(5);
+            crField.className = `text-sm font-bold ${ahpResult.isConsistent ? 'text-green-600' : 'text-rose-600'}`;
+
+            // 11. Render Tab 5 (TOPSIS Calculations View)
+            const tSample = topsisResult.items.slice(0, 15);
+            const tNormContainer = document.getElementById("topsis-norm-container");
+            if (tSample.length === 0) {
+                tNormContainer.innerHTML = `<div class="p-4 text-center text-slate-450">Data kosong.</div>`;
+                document.getElementById("topsis-weighted-container").innerHTML = ``;
+                document.getElementById("topsis-ideals-container").innerHTML = ``;
+            } else {
+                tNormContainer.innerHTML = `
+                    <table class="table-auto w-full text-xs text-center border-collapse">
+                        <thead class="bg-slate-50 font-bold text-slate-500 sticky top-0 border-b p-2">
+                            <tr>
+                                <th class="px-3 py-2 text-left">Nama</th>
+                                <th class="px-2 py-2">r1 (Kinerja)</th><th class="px-2 py-2">r2 (Pengalaman)</th><th class="px-2 py-2">r3 (Gaji)</th><th class="px-2 py-2">r4 (Usia)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-mono text-slate-600">
+                            ${tSample.map(it => `
+                                <tr>
+                                    <td class="px-3 py-1.5 text-left font-sans font-semibold text-slate-800">${it.employee.Name}</td>
+                                    <td class="px-2 py-1.5">${it.r_c1.toFixed(4)}</td>
+                                    <td class="px-2 py-1.5">${it.r_c2.toFixed(4)}</td>
+                                    <td class="px-2 py-1.5">${it.r_c3.toFixed(4)}</td>
+                                    <td class="px-2 py-1.5">${it.r_c4.toFixed(4)}</td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
+                    </table>
+                `;
+
+                document.getElementById("topsis-weighted-header").innerText = `Langkah 3 & 4: Matriks Ternormalisasi Terbobot (V) • Multiply with scale: W1: ${ahpResult.weights[0].toFixed(3)}, W2: ${ahpResult.weights[1].toFixed(3)}, W3: ${ahpResult.weights[2].toFixed(3)}, W4: ${ahpResult.weights[3].toFixed(3)}`;
+                document.getElementById("topsis-weighted-container").innerHTML = `
+                    <table class="table-auto w-full text-xs text-center border-collapse">
+                        <thead class="bg-slate-50 font-bold text-slate-500 sticky top-0 border-b">
+                            <tr>
+                                <th class="px-3 py-2 text-left">Nama</th>
+                                <th class="px-2 py-2">v1 (Kinerja)</th><th class="px-2 py-2">v2 (Pengalaman)</th><th class="px-2 py-2">v3 (Gaji)</th><th class="px-2 py-2">v4 (Usia)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-mono text-slate-600">
+                            ${tSample.map(it => `
+                                <tr>
+                                    <td class="px-3 py-1.5 text-left font-sans font-semibold text-slate-800">${it.employee.Name}</td>
+                                    <td class="px-2 py-1.5">${it.v_c1.toFixed(4)}</td>
+                                    <td class="px-2 py-1.5">${it.v_c2.toFixed(4)}</td>
+                                    <td class="px-2 py-1.5">${it.v_c3.toFixed(4)}</td>
+                                    <td class="px-2 py-1.5">${it.v_c4.toFixed(4)}</td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
+                    </table>
+                `;
+
+                document.getElementById("topsis-ideals-container").innerHTML = `
+                    <table class="table-auto w-full text-xs text-center border-collapse">
+                        <thead class="bg-slate-50 font-bold text-slate-500 border-b">
+                            <tr>
+                                <th class="px-3 py-3 text-left">Alternatif / Ideal</th>
+                                <th class="px-2 py-3">C1 (Perf) [Max]</th><th class="px-2 py-3">C2 (Exp) [Max]</th>
+                                <th class="px-2 py-3">C3 (Sal) [Min]</th><th class="px-2 py-3">C4 (Age) [Min]</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-mono">
+                            <tr class="bg-emerald-50/50">
+                                <td class="px-3 py-2.5 text-left font-sans font-bold text-emerald-800">Ideal Positif (A+)</td>
+                                <td class="px-2 py-2.5 text-emerald-700 font-bold">${topsisResult.idealPositive[0].toFixed(5)}</td>
+                                <td class="px-2 py-2.5 text-emerald-700 font-bold">${topsisResult.idealPositive[1].toFixed(5)}</td>
+                                <td class="px-2 py-2.5 text-emerald-700 font-bold">${topsisResult.idealPositive[2].toFixed(5)}</td>
+                                <td class="px-2 py-2.5 text-emerald-700 font-bold">${topsisResult.idealPositive[3].toFixed(5)}</td>
+                            </tr>
+                            <tr class="bg-rose-50/50">
+                                <td class="px-3 py-2.5 text-left font-sans font-bold text-rose-800">Ideal Negatif (A-)</td>
+                                <td class="px-2 py-2.5 text-rose-700 font-bold">${topsisResult.idealNegative[0].toFixed(5)}</td>
+                                <td class="px-2 py-2.5 text-rose-700 font-bold">${topsisResult.idealNegative[1].toFixed(5)}</td>
+                                <td class="px-2 py-2.5 text-rose-700 font-bold">${topsisResult.idealNegative[2].toFixed(5)}</td>
+                                <td class="px-2 py-2.5 text-rose-700 font-bold">${topsisResult.idealNegative[3].toFixed(5)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                `;
+            }
+
+            // 12. Render Tab 6 (Visualizations list & Decisive Tables)
+            const vBarsContainer = document.getElementById("visual-bars-ranking-container");
+            const top10 = topsisResult.items.slice(0, 10);
+            if (top10.length === 0) {
+                vBarsContainer.innerHTML = `<p class="p-8 text-center text-slate-400">Data kosong.</p>`;
+            } else {
+                vBarsContainer.innerHTML = `
+                    <div class="space-y-4">
+                        ${top10.map((it, idx) => {
+                            let barColor = "bg-blue-600";
+                            let badge = "";
+                            if (idx === 0) { barColor = "bg-yellow-500"; badge = "🥇"; }
+                            else if (idx === 1) { barColor = "bg-slate-400"; badge = "🥈"; }
+                            else if (idx === 2) { barColor = "bg-amber-600"; badge = "🥉"; }
+                            
+                            return `
+                                <div>
+                                    <div class="flex justify-between items-end mb-1">
+                                        <span class="text-xs font-bold text-slate-700">${idx+1}. ${it.employee.Name} <span class="text-slate-400 font-normal font-sans text-[9px]">(${it.employee.Department})</span></span>
+                                        <span class="text-[9px] font-mono font-bold text-blue-600">${it.preferenceWeight.toFixed(4)}</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                        <div class="h-2 rounded-full transition-all duration-500 ${barColor}" style="width: ${it.preferenceWeight * 100}%"></div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join("")}
+                    </div>
+                    <div class="border-t pt-3 mt-4 text-[11px] text-slate-500 italic leading-relaxed">
+                        Analisis menunjukkan <strong>${top10[0].employee.Name}</strong> memiliki skor tertinggi berkat konsistensi yang sangat tinggi pada parameter <strong>Skor Kinerja (C1)</strong>, masa kontribusi optimal di divisi, serta faktor pendukung usia produktif yang efisien berdasarkan prioritas pembobotan AHP sebesar <strong>${(ahpResult.weights[0]*100).toFixed(1)}%</strong>.
+                    </div>
+                `;
+            }
+
+            const rankTableBody = document.getElementById("ranking-table-body");
+            if (topsisResult.items.length === 0) {
+                rankTableBody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-slate-450">Karyawan kosong.</td></tr>`;
+            } else {
+                rankTableBody.innerHTML = topsisResult.items.map((it, idx) => `
+                    <tr class="hover:bg-slate-50 transition-colors ${idx === 0 ? 'bg-blue-50/10' : ''}">
+                        <td class="px-4 py-3 text-center font-bold text-slate-700">${idx === 0 ? "🥇 01" : idx === 1 ? "🥈 02" : idx === 2 ? "🥉 03" : "#"+String(idx+1).padStart(2,'0')}</td>
+                        <td class="px-4 py-3">
+                            <div class="font-bold text-slate-800">${it.employee.Name}</div>
+                            <div class="text-[9px] text-slate-400">ID #${it.employee.ID} • ${it.employee.Department}</div>
+                        </td>
+                        <td class="px-3 py-3 text-right font-mono text-slate-500">${it.dPlus.toFixed(4)}</td>
+                        <td class="px-3 py-3 text-right font-mono text-slate-500">${it.dMinus.toFixed(4)}</td>
+                        <td class="px-4 py-3 text-right font-mono font-bold text-indigo-700">${it.preferenceWeight.toFixed(5)}</td>
+                    </tr>
+                `).join("");
+            }
+
+            // 13. Render Tab 7 (Surat Keputusan)
+            const recContainer = document.getElementById("rekomendasi-sheet-container");
+            if (!bestCandidate) {
+                recContainer.innerHTML = `<p class="p-8 text-center text-slate-400">Pilihan kosong.</p>`;
+            } else {
+                recContainer.innerHTML = `
+                    <div class="border border-slate-200 rounded-2xl p-6 bg-slate-50 space-y-5">
+                        <div class="border-b-2 border-slate-400 pb-3 text-center">
+                            <h4 class="font-extrabold text-slate-800 uppercase tracking-wide text-sm sm:text-base">SURAT REKOMENDASI PROMOSI STRUKTURAL KEPEMIMPINAN</h4>
+                            <p class="text-[10px] text-slate-500 font-mono mt-0.5">Ref No: SK-SPK/${bestCandidate.employee.ID}/UI-2026</p>
+                        </div>
+                        <div class="text-xs sm:text-sm text-slate-700 space-y-4 font-sans leading-relaxed">
+                            <p>
+                                Berdasarkan hasil pengujian sistem pendukung keputusan promosi jabatan menggunakan integrasi model matematis metode <strong>AHP (Analytic Hierarchy Process)</strong> untuk bobot kriteria terstruktur, dan metode <strong>TOPSIS (Technique for Order Preference by Similarity to Ideal Solution)</strong> untuk pemeringkatan riil kandidat, diputuskan bahwa:
+                            </p>
+                            <div class="bg-white border rounded-xl p-4 sm:p-5 space-y-3 shadow-xs">
+                                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-2">
+                                    <span class="text-xs text-slate-400">ID / Nama Karyawan</span>
+                                    <span class="font-bold text-slate-900 text-sm">${bestCandidate.employee.Name} (ID #${bestCandidate.employee.ID})</span>
+                                </div>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs font-semibold">
+                                    <div>
+                                        <p class="text-slate-400 text-[10px] uppercase font-normal">Departemen Asal</p>
+                                        <p class="text-slate-800">${bestCandidate.employee.Department}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-slate-400 text-[10px] uppercase font-normal">Usia Karyawan</p>
+                                        <p class="text-slate-800">${bestCandidate.c4_value} Tahun</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-slate-400 text-[10px] uppercase font-normal">Gender / Lokasi</p>
+                                        <p class="text-slate-800">${bestCandidate.employee.Gender} / ${bestCandidate.employee.Location}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-slate-400 text-[10px] uppercase font-normal">Masa Kerja (C2)</p>
+                                        <p class="text-slate-800">${bestCandidate.c2_value} Tahun</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-slate-400 text-[10px] uppercase font-normal">Gaji Saat Ini (C3)</p>
+                                        <p class="text-slate-800">Rp${bestCandidate.c3_value.toLocaleString("id-ID")}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-indigo-600 text-[10px] uppercase font-bold">Skor Kinerja (C1)</p>
+                                        <p class="text-indigo-600 font-extrabold">${bestCandidate.c1_value.toFixed(1)} / 5.0</p>
+                                    </div>
+                                </div>
+                                <div class="bg-blue-50 text-blue-800 p-3 rounded-lg flex justify-between items-center text-xs font-bold border border-blue-200 mt-2">
+                                    <span>Skor Preferensi Kedekatan Ideal Positif (P_i)</span>
+                                    <span class="font-mono text-sm">${bestCandidate.preferenceWeight.toFixed(5)}</span>
+                                </div>
+                            </div>
+                            <p>
+                                Kandidat <strong>${bestCandidate.employee.Name}</strong> terpilih karena mengantongi total parameter keserasian kriteria yang superior. Sejalan dengan bobot timbangan AHP yang menitikberatkan <strong>Skor Kinerja unggul</strong> (${(ahpResult.weights[0]*100).toFixed(1)}%), dipadukan dengan faktor keseimbangan birokrasi biaya gaji dan usia masa produktif, kandidat ini dinilai paling berhak diajukan sebagai pimpinan struktural baru departemen berikutnya.
+                            </p>
+                        </div>
+                        <div class="pt-6 flex justify-between text-[11px] font-semibold text-slate-500 border-t">
+                            <div class="text-center">
+                                <p class="mb-10">Ketua Tim Penilai Promosi</p>
+                                <p class="border-t border-slate-400 pt-1 font-bold text-slate-700">Titis I. D., M.Kom.</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="mb-10">Jakarta, 5 Juni 2026</p>
+                                <p class="border-t border-slate-400 pt-1 font-bold text-slate-705">Sistem SPK Terautomasi</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 14. Hydrate Icons with Lucide
+            lucide.createIcons();
+        }
+
+        // Snap and clone download of currently configured single state page
+        function triggerHTMLDownload() {
+            const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "Sistem_Pendukung_Keputusan_AHP_TOPSIS.html";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize App on Window Load
+        window.addEventListener('DOMContentLoaded', () => {
+            updateApp();
+        });
+    </script>
+</body>
+</html>

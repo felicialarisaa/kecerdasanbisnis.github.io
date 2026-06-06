@@ -1,0 +1,6 @@
+{
+  "name": "SPK Promosi Jabatan AHP-TOPSIS",
+  "description": "Sistem Pendukung Keputusan Pemilihan Karyawan untuk Promosi Jabatan Menggunakan Metode AHP dan TOPSIS",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
